@@ -13,5 +13,4 @@ public class Product {
     private String description;
     private Double price;
 
-    // Getter ve Setter metotları (veya Lombok kullanıyorsan @Data)
 }
