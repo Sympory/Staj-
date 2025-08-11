@@ -25,5 +25,4 @@ public class Offer {
     private Product product;
 
 
-    // Getter & Setter metotlarını eklemeyi unutma
 }

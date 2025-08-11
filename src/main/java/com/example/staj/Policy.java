@@ -19,5 +19,4 @@ public class Policy {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    // Getter ve Setter metotları
 }
