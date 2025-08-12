@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Poliçe Listesi</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card { border:0; box-shadow:0 10px 30px rgba(0,0,0,.06); }
+    .badge-active { background:#16a34a; }
+    .badge-passive { background:#6b7280; }
+  </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg bg-white border-bottom">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">Staj CRM</a>
+    <div class="ms-auto d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="/customers">Müşteriler</a>
+      <a class="btn btn-warning" href="/policies/new">Poliçe Ekle</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <!-- Filtreler -->
+  <div class="card p-3 mb-3">
+    <form class="row g-3" method="get" action="/policies">
+      <div class="col-md-3">
+        <label class="form-label">Ara (no / müşteri / plaka)</label>
+        <input class="form-control" type="text" name="q" th:value="${q}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Müşteri</label>
+        <select class="form-select" name="customerId" id="customerSelect">
+          <option value="" th:selected="${customerId == null}">Tümü</option>
+          <option th:each="c : ${customers}"
+                  th:value="${c.id}"
+                  th:selected="${customerId != null and customerId == c.id}"
+                  th:text="${c.name + ' (' + c.email + ')'}"></option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Araç</label>
+        <select class="form-select" name="carId" id="carSelect">
+          <option value="" th:selected="${carId == null}">Tümü</option>
+          <option th:each="car : ${cars}"
+                  th:value="${car.id}"
+                  th:attr="data-customer-id=${car.customer.id}"
+                  th:selected="${carId != null and carId == car.id}"
+                  th:text="${car.plate}"></option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Durum</label>
+        <select class="form-select" name="active">
+          <option value="" th:selected="${active == null}">Tümü</option>
+          <option value="true"  th:selected="${active == true}">Aktif</option>
+          <option value="false" th:selected="${active == false}">Pasif</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Başlangıç ≥</label>
+        <input type="date" class="form-control" name="startFrom"
+               th:value="${startFrom != null ? #temporals.format(startFrom,'yyyy-MM-dd') : null}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Bitiş ≤</label>
+        <input type="date" class="form-control" name="endTo"
+               th:value="${endTo != null ? #temporals.format(endTo,'yyyy-MM-dd') : null}">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Sayfa Boyutu</label>
+        <select class="form-select" name="size">
+          <option th:value="10"  th:selected="${page != null and page.size == 10}">10</option>
+          <option th:value="20"  th:selected="${page != null and page.size == 20}">20</option>
+          <option th:value="50"  th:selected="${page != null and page.size == 50}">50</option>
+          <option th:value="100" th:selected="${page != null and page.size == 100}">100</option>
+        </select>
+      </div>
+
+      <div class="col-md-4 d-flex align-items-end gap-2">
+        <button class="btn btn-primary" type="submit">Uygula</button>
+        <a class="btn btn-outline-secondary" href="/policies">Temizle</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tablo -->
+  <div class="card p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle m-0">
+        <thead class="table-light">
+        <tr>
+          <th>Poliçe No</th>
+          <th>Müşteri</th>
+          <th>Plaka</th>
+          <th>Başlangıç</th>
+          <th>Bitiş</th>
+          <th>Durum</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${policies}">
+          <td th:text="${p.policyNumber}">PN</td>
+          <td th:text="${p.customer != null ? p.customer.name : '-'}">-</td>
+          <td th:text="${p.car != null ? p.car.plate : '-'}">-</td>
+          <td th:text="${p.startDate != null ? #temporals.format(p.startDate,'dd.MM.yyyy') : '-'}">-</td>
+          <td th:text="${p.endDate   != null ? #temporals.format(p.endDate,'dd.MM.yyyy')   : '-'}">-</td>
+          <td>
+            <span class="badge"
+                  th:classappend="${p.active} ? ' badge-active' : ' badge-passive'"
+                  th:text="${p.active} ? 'Aktif' : 'Pasif'">Aktif</span>
+          </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(policies)}">
+          <td colspan="6" class="text-center text-muted py-4">Kayıt bulunamadı.</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="p-3">
+      <nav th:if="${page != null and page.totalPages > 1}">
+        <ul class="pagination m-0">
+          <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/policies(page=${page.number-1}, size=${page.size}, q=${q},
+                                     active=${active}, customerId=${customerId},
+                                     carId=${carId}, startFrom=${startFrom}, endTo=${endTo})}">Önceki</a>
+          </li>
+
+          <li class="page-item"
+              th:each="i : ${#numbers.sequence(0, page.totalPages-1)}"
+              th:classappend="${i == page.number} ? 'active'">
+            <a class="page-link"
+               th:text="${i + 1}"
+               th:href="@{/policies(page=${i}, size=${page.size}, q=${q},
+                                     active=${active}, customerId=${customerId},
+                                     carId=${carId}, startFrom=${startFrom}, endTo=${endTo})}"></a>
+          </li>
+
+          <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/policies(page=${page.number+1}, size=${page.size}, q=${q},
+                                     active=${active}, customerId=${customerId},
+                                     carId=${carId}, startFrom=${startFrom}, endTo=${endTo})}">Sonraki</a>
+          </li>
+        </ul>
+      </nav>
+      <div class="text-muted small mt-2" th:if="${page != null}">
+        Toplam <span th:text="${page.totalElements}">0</span> kayıt •
+        Sayfa <span th:text="${page.number+1}">1</span>/<span th:text="${page.totalPages}">1</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Araba dropdown'unu müşteri seçimine göre filtrele
+  const cs = document.getElementById('customerSelect');
+  const carSelect = document.getElementById('carSelect');
+  function filterCars() {
+    const cid = cs.value;
+    [...carSelect.options].forEach((o, idx) => {
+      if (idx === 0) return;
+      const owner = o.getAttribute('data-customer-id');
+      o.style.display = (!cid || owner === cid) ? '' : 'none';
+      if (o.style.display === 'none' && o.selected) carSelect.value = '';
+    });
+  }
+  cs?.addEventListener('change', filterCars);
+  filterCars();
+</script>
+
+<script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
