@@ -2,7 +2,7 @@ package com.example.staj.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.staj.Offer;
+import com.example.staj.entity.Offer;
 
 public interface OfferRepository extends JpaRepository<Offer, Long> {
 }

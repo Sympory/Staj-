@@ -1,4 +1,4 @@
-package com.example.staj;
+package com.example.staj.entity;
 
 public @interface BaseEntity {
 

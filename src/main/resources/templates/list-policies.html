@@ -13,7 +13,7 @@
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg bg-white border-bottom">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="/">Staj CRM</a>
+    <a class="navbar-brand fw-bold" href="/">Staj </a>
     <div class="ms-auto d-flex gap-2">
       <a class="btn btn-outline-secondary" href="/customers">Müşteriler</a>
       <a class="btn btn-warning" href="/policies/new">Poliçe Ekle</a>
@@ -102,6 +102,7 @@
           <th>Başlangıç</th>
           <th>Bitiş</th>
           <th>Durum</th>
+          <th>İşlemler</th>
         </tr>
         </thead>
         <tbody>
@@ -116,9 +117,48 @@
                   th:classappend="${p.active} ? ' badge-active' : ' badge-passive'"
                   th:text="${p.active} ? 'Aktif' : 'Pasif'">Aktif</span>
           </td>
+          <td class="text-end">
+  <!-- Aktif poliçede: sadece İptal Et -->
+  <form th:if="${p.active}"
+        th:action="@{'/policies/' + ${p.id} + '/cancel'}"
+        method="post" class="d-inline">
+    <input type="hidden"
+           th:if="${_csrf != null}"
+           th:name="${_csrf.parameterName}"
+           th:value="${_csrf.token}">
+    <button type="submit" class="btn btn-danger btn-sm"
+            onclick="return confirm('Bu poliçeyi iptal etmek istediğinize emin misiniz?')">
+      İptal Et
+    </button>
+  </form>
+
+  <!-- Pasif poliçede: Aktifleştir + Sil -->
+  <form th:if="${!p.active}"
+        th:action="@{'/policies/' + ${p.id} + '/activate'}"
+        method="post" class="d-inline">
+    <input type="hidden"
+           th:if="${_csrf != null}"
+           th:name="${_csrf.parameterName}"
+           th:value="${_csrf.token}">
+    <button type="submit" class="btn btn-success btn-sm">Aktifleştir</button>
+  </form>
+
+  <form th:if="${!p.active}"
+        th:action="@{'/policies/' + ${p.id} + '/delete'}"
+        method="post" class="d-inline">
+    <input type="hidden"
+           th:if="${_csrf != null}"
+           th:name="${_csrf.parameterName}"
+           th:value="${_csrf.token}">
+    <button type="submit" class="btn btn-outline-danger btn-sm"
+            onclick="return confirm('Kalıcı olarak silinsin mi?')">
+      Sil
+    </button>
+  </form>
+</td>
         </tr>
         <tr th:if="${#lists.isEmpty(policies)}">
-          <td colspan="6" class="text-center text-muted py-4">Kayıt bulunamadı.</td>
+          <td colspan="7" class="text-center text-muted py-4">Kayıt bulunamadı.</td>
         </tr>
         </tbody>
       </table>

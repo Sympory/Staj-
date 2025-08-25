@@ -1,6 +1,9 @@
-package com.example.staj;
+package com.example.staj.controller;
 
 import com.example.staj.repository.CustomerRepository;
+import com.example.staj.entity.Car;
+import com.example.staj.entity.Customer;
+import com.example.staj.entity.Policy;
 import com.example.staj.repository.CarRepository;
 import com.example.staj.repository.PolicyRepository;
 import jakarta.validation.Valid;
@@ -94,35 +97,97 @@ public class CustomerController {
 public String showAddCarForm(Model model) {
     model.addAttribute("car", new Car());
     model.addAttribute("customers", customerRepo.findAll());
+    model.addAttribute("cars", carRepo.findAll()); // 👈 liste için
     return "add-car";
 }
+
 
 @PostMapping("/cars")
 public String createCar(@RequestParam Long customerId,
                         @RequestParam String plate,
                         @RequestParam(required = false) String brand,
-                        @RequestParam(required = false) String model,
+                        // ESKİ: @RequestParam(required = false) String model,
+                        @RequestParam(name = "carModel", required = false) String carModel,
                         @RequestParam(required = false) Integer modelYear,
                         RedirectAttributes ra) {
     var customer = customerRepo.findById(customerId).orElseThrow();
     var car = new Car();
     car.setCustomer(customer);
-    car.setPlate(plate);
+    car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
     car.setBrand(brand);
-    car.setModel(model);
+    car.setModel(carModel);              // 👈 burada carModel
     car.setModelYear(modelYear);
     carRepo.save(car);
-    ra.addFlashAttribute("msg", "Araba eklendi: " + plate);
-    return "redirect:/policies/new"; // sonra poliçe eklemeye geri dön
+    ra.addFlashAttribute("msg", "Araba eklendi: " + car.getPlate());
+    return "redirect:/cars/new";
 }
 
-    // Poliçe ekleme formu
-    @GetMapping("/policies/new")
-    public String showAddPolicyForm(Model model) {
-        model.addAttribute("customers", customerRepo.findAll()); // <-- bean üzerinden
-        model.addAttribute("cars", carRepo.findAll());           // <-- bean üzerinden
-        return "add-policy";
+
+// Araba GÜNCELLE (satır-içi)
+@PostMapping("/cars/{id}/update")
+public String updateCar(@PathVariable Long id,
+                        @RequestParam Long customerId,
+                        @RequestParam String plate,
+                        @RequestParam(required = false) String brand,
+                    
+                        @RequestParam(name = "carModel", required = false) String carModel,
+                        @RequestParam(required = false) Integer modelYear,
+                        RedirectAttributes ra) {
+    var car = carRepo.findById(id).orElseThrow();
+    var customer = customerRepo.findById(customerId).orElseThrow();
+
+    car.setCustomer(customer);
+    car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
+    car.setBrand(brand);
+    car.setModel(carModel);              
+    car.setModelYear(modelYear);
+    carRepo.save(car);
+
+    ra.addFlashAttribute("msg", "Araba güncellendi: " + car.getPlate());
+    return "redirect:/cars/new";
+}
+
+
+// Araba sil
+@PostMapping("/cars/{id}/delete")
+public String deleteCar(@PathVariable Long id, RedirectAttributes ra) {
+    if (carRepo.existsById(id)) {
+        carRepo.deleteById(id);
+        ra.addFlashAttribute("msg", "Araba silindi (ID: " + id + ")");
+    } else {
+        ra.addFlashAttribute("err", "Araba bulunamadı!");
     }
+    return "redirect:/cars/new";
+}
+
+    // Poliçe aktifleştir
+@PostMapping("/policies/{id}/activate")
+public String activatePolicy(@PathVariable Long id, RedirectAttributes ra) {
+    var p = policyRepo.findById(id).orElse(null);
+    if (p == null) {
+        ra.addFlashAttribute("err", "Poliçe bulunamadı!");
+    } else {
+        p.setActive(true);
+        policyRepo.save(p);
+        ra.addFlashAttribute("msg", "Poliçe aktifleştirildi: " + p.getPolicyNumber());
+    }
+    return "redirect:/policies";
+}
+// ✅ Poliçeyi silme
+    @PostMapping("/policies/{id}/delete")
+    public String deletePolicy(@PathVariable Long id, RedirectAttributes ra) {
+        if (policyRepo.existsById(id)) {
+            policyRepo.deleteById(id);
+            ra.addFlashAttribute("msg", "Poliçe silindi (ID: " + id + ")");
+        } else {
+            ra.addFlashAttribute("err", "Poliçe bulunamadı!");
+        }
+        return "redirect:/policies";
+    }
+
+
+    // Poliçe ekleme formu
+    
     @GetMapping("/policies")
 public String listPolicies(
         @RequestParam(required = false) String q,
@@ -159,6 +224,21 @@ public String listPolicies(
     model.addAttribute("customers", customerRepo.findAll());
     model.addAttribute("cars", carRepo.findAll());
     return "list-policies";
+}
+    // Poliçe iptal et
+@PostMapping("/policies/{id}/cancel")
+public String cancelPolicy(@PathVariable Long id, RedirectAttributes ra) {
+    var p = policyRepo.findById(id).orElse(null);
+    if (p == null) {
+        ra.addFlashAttribute("err", "Poliçe bulunamadı!");
+    } else {
+        p.setActive(false); // aktiflik kaldır
+        // Eğer Policy entity'nde status alanı varsa:
+        // p.setStatus(PolicyStatus.CANCELLED);
+        policyRepo.save(p);
+        ra.addFlashAttribute("msg", "Poliçe iptal edildi: " + p.getPolicyNumber());
+    }
+    return "redirect:/policies";
 }
 
     // Poliçe kaydet

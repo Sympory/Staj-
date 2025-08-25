@@ -1,7 +1,8 @@
 package com.example.staj.services;
 
-import com.example.staj.Customer;
 import java.util.List;
+
+import com.example.staj.entity.Customer;
 
 public interface CustomerService {
     List<Customer> getAllCustomers();

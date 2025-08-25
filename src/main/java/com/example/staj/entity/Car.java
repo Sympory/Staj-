@@ -1,4 +1,4 @@
-package com.example.staj;
+package com.example.staj.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Yeni Teklif</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-4">
+
+<h2>Yeni Teklif Oluştur</h2>
+
+<form th:action="@{/quotes}" method="post" class="row g-3">
+
+  <!-- Müşteri -->
+  <div class="col-md-6">
+    <label class="form-label">Müşteri</label>
+    <select id="customerSelect" class="form-select" name="customerId" required>
+      <option value="" selected disabled>Seçiniz</option>
+      <option th:each="c : ${customers}"
+              th:value="${c.id}"
+              th:text="${c.name} + ' (' + ${c.email} + ')'"></option>
+    </select>
+  </div>
+
+  <!-- Araç (Plaka) - müşteri seçimine göre -->
+  <div class="col-md-6">
+    <label class="form-label">Araç (Plaka)</label>
+    <select id="carPlateSelect" class="form-select" name="carPlate" required>
+      <option value="" selected disabled>Önce müşteri seçin</option>
+    </select>
+    <div class="form-text">Müşteri seçince yalnız o müşterinin plakaları listelenir.</div>
+  </div>
+
+  <!-- GİZLİ “tüm araçlar” deposu -->
+  <select id="allCarsStore" class="d-none">
+    <option th:each="a : ${cars}"
+            th:attr="data-customer-id=${a.customer.id}"
+            th:value="${a.plate}"
+            th:text="${a.plate} + ' • ' + ${a.brand} + ' ' + ${a.model}"></option>
+  </select>
+
+  <!-- Ürün -->
+  <div class="col-md-4">
+    <label class="form-label">Ürün</label>
+    <select class="form-select" name="product" required>
+      <option value="KASKO">Kasko</option>
+      <option value="TRAFIK">Trafik</option>
+    </select>
+  </div>
+
+  <!-- Başlangıç & Bitiş -->
+  <div class="col-md-4">
+    
+    <label class="form-label">Başlangıç Tarihi</label>
+    <input type="date" class="form-control" name="startDate"
+       th:value="${today}"
+       th:attr="min=${#temporals.format(today,'yyyy-MM-dd')}"
+       required id="startDate">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Bitiş Tarihi</label>
+    <input type="date" class="form-control" name="endDate"
+       th:value="${defaultEnd}"
+       th:attr="min=${#temporals.format(today,'yyyy-MM-dd')}"
+       required id="endDate">
+  </div>
+
+  <!-- Geçerlilik -->
+  <div class="col-md-3">
+    <label class="form-label">Geçerlilik (gün)</label>
+    <input type="number" class="form-control" name="validDays" value="7" min="1" max="60" required>
+  </div>
+
+  <!-- Butonlar -->
+  <div class="col-12 d-flex gap-2 pt-2">
+    <a href="/quotes" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Listeye Dön
+    </a>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Teklif Oluştur
+    </button>
+  </div>
+</form>
+
+
+<!-- JS -->
+<script>
+  // Başlangıç değişince bitişi +1 yıl yap
+  const s = document.getElementById('startDate');
+  const e = document.getElementById('endDate');
+  if (s && e) {
+    s.addEventListener('change', () => {
+      const d = new Date(s.value);
+      if (!isNaN(d)) {
+        const y = new Date(d); y.setFullYear(d.getFullYear() + 1);
+        const month = String(y.getMonth() + 1).padStart(2, '0');
+        const day   = String(y.getDate()).padStart(2, '0');
+        e.value = `${y.getFullYear()}-${month}-${day}`;
+      }
+    });
+  }
+
+  // Müşteri seçilince plakaları filtrele
+  const customerSelect = document.getElementById('customerSelect');
+  const carSelect = document.getElementById('carPlateSelect');
+  const store = document.getElementById('allCarsStore');
+
+  function refillCars(customerId) {
+    carSelect.innerHTML = '';
+    const def = document.createElement('option');
+    def.value = ''; def.disabled = true; def.selected = true;
+    def.textContent = 'Plaka seçiniz';
+    carSelect.appendChild(def);
+
+    Array.from(store.options).forEach(opt => {
+      if (String(opt.dataset.customerId) === String(customerId)) {
+        const copy = document.createElement('option');
+        copy.value = opt.value;
+        copy.textContent = opt.textContent;
+        carSelect.appendChild(copy);
+      }
+    });
+
+    if (carSelect.options.length === 1) {
+      const no = document.createElement('option');
+      no.value = ''; no.disabled = true;
+      no.textContent = 'Bu müşteriye kayıtlı araç yok';
+      carSelect.appendChild(no);
+    }
+  }
+
+  if (customerSelect) {
+    customerSelect.addEventListener('change', () => {
+      if (customerSelect.value) refillCars(customerSelect.value);
+    });
+    if (customerSelect.value) refillCars(customerSelect.value);
+  }
+</script>
+
+</body>
+</html>

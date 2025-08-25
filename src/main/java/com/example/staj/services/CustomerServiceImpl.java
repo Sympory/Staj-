@@ -1,9 +1,10 @@
 package com.example.staj.services;
 
-import com.example.staj.Customer;
 //import com.example.staj.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.example.staj.entity.Customer;
 
 import java.util.List;
 

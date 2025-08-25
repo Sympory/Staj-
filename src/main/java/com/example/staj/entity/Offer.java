@@ -1,6 +1,6 @@
 
 
-package com.example.staj;
+package com.example.staj.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
