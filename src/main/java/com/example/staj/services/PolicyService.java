@@ -9,8 +9,11 @@ import com.example.staj.repository.QuoteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class PolicyService {
@@ -21,6 +24,32 @@ public class PolicyService {
     public PolicyService(QuoteRepository quoteRepo, PolicyRepository policyRepo) {
         this.quoteRepo = quoteRepo;
         this.policyRepo = policyRepo;
+    }
+
+    @Transactional
+public Long create(Long customerId,
+                   Long carId,
+                   String policyNumber,
+                   LocalDate startDate,
+                   LocalDate endDate,
+                   boolean active) {
+
+            customer = customerRepo.findById(customerId)
+            .orElseThrow(() -> new IllegalArgumentException("Müşteri bulunamadı: " + customerId));
+
+    var p = new Policy();
+    p.setPolicyNumber(policyNumber);
+    p.setStartDate(startDate);
+    p.setEndDate(endDate);
+    p.setActive(active);
+    p.setStatus(active ? PolicyStatus.ACTIVE : PolicyStatus.DRAFT); // istersen DRAFT yerine PENDING
+    p.setCustomer(customer);
+
+    if (carId != null) {
+        var car = carRepo.findById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Araç bulunamadı: " + carId));
+        p.setCar(car);
+        // istersen overlap kontrolü burada da yapabilirsin
     }
 
     @Transactional
@@ -68,6 +97,15 @@ public class PolicyService {
     }
      // ✅ Pasif poliçeyi AKTİFLEŞTİR – overlap kontrolü ile
     @Transactional
+    
+    public Page<Policy> search(String q, Boolean active, Long customerId, Long carId,
+                               LocalDate startFrom, LocalDate endTo, Pageable pageable) {
+        return policyRepo.search(
+                (q == null || q.isBlank()) ? null : q.trim(),
+                active, customerId, carId, startFrom, endTo, pageable
+        );
+    }
+
     public void activatePolicy(Long policyId) {
         Policy p = policyRepo.findById(policyId)
                 .orElseThrow(() -> new IllegalArgumentException("Poliçe bulunamadı"));
