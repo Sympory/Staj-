@@ -9,4 +9,9 @@ import java.util.Optional;
 public interface CarRepository extends JpaRepository<Car, Long> {
     Optional<Car> findByPlate(String plate);
     List<Car> findAllByCustomerIdOrderByPlateAsc(Long customerId);
+ // Sadece aktif arabalar
+    List<Car> findAllByActiveTrue();
+    
+    boolean existsByPlateIgnoreCase(String plate);
+    boolean existsByPlateIgnoreCaseAndIdNot(String plate, Long id);
 }

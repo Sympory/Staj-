@@ -49,13 +49,13 @@ public class QuoteController {
   public String newForm(Model model) {
     model.addAttribute("quote", new Quote());
     model.addAttribute("customers", customerRepo.findAll());
-    model.addAttribute("cars", carRepo.findAll()); // tüm araçlar; sayfada müşteriye göre filtreleyeceğiz
+    model.addAttribute("cars", carRepo.findAllByActiveTrue());
     model.addAttribute("today", LocalDate.now());
     model.addAttribute("defaultEnd", LocalDate.now().plusYears(1));
     return "add-quote";
   }
 
-  @PostMapping("/quotes")
+  @PostMapping("/quotes")     
   public String create(@RequestParam Long customerId,
                        @RequestParam String carPlate,
                        @RequestParam String product,

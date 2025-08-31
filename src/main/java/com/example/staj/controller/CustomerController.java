@@ -1,5 +1,13 @@
 package com.example.staj.controller;
-
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import com.example.staj.repository.BrandRepository;
+import com.example.staj.repository.CarModelRepository;
+import com.example.staj.entity.Brand;
+import com.example.staj.entity.CarModel;
+import org.springframework.http.ResponseEntity;
+import java.util.stream.Collectors;
 import com.example.staj.repository.CustomerRepository;
 import com.example.staj.entity.Car;
 import com.example.staj.entity.Customer;
@@ -23,15 +31,23 @@ public class CustomerController {
     private final CustomerRepository customerRepo;
     private final CarRepository carRepo;
     private final PolicyRepository policyRepo;
+    private final CarModelRepository carModelRepo;
+    private final BrandRepository brandRepo;
 
-    @Autowired
-    public CustomerController(CustomerRepository customerRepo,
-                              CarRepository carRepo,
-                              PolicyRepository policyRepo) {
-        this.customerRepo = customerRepo;
-        this.carRepo = carRepo;
-        this.policyRepo = policyRepo;
-    }
+
+@Autowired
+public CustomerController(CustomerRepository customerRepo,
+                          CarRepository carRepo,
+                          PolicyRepository policyRepo,
+                          BrandRepository brandRepo,
+                          CarModelRepository carModelRepo) {
+    this.customerRepo = customerRepo;
+    this.carRepo = carRepo;
+    this.policyRepo = policyRepo;
+    this.brandRepo = brandRepo;
+    this.carModelRepo = carModelRepo;
+}
+
 
     // Ana sayfa
     @GetMapping("/")
@@ -93,72 +109,114 @@ public class CustomerController {
 
     // imports: CarRepository, CustomerRepository, RedirectAttributes, etc.
 
-@GetMapping("/cars/new")
-public String showAddCarForm(Model model) {
-    model.addAttribute("car", new Car());
-    model.addAttribute("customers", customerRepo.findAll());
-    model.addAttribute("cars", carRepo.findAll()); // 👈 liste için
-    return "add-car";
+
+    @GetMapping("/cars/new")
+    public String showAddCarForm(Model model) {
+        model.addAttribute("car", new Car());
+        model.addAttribute("customers", customerRepo.findAll());
+        model.addAttribute("cars", carRepo.findAllByActiveTrue());  // ✅ sadece aktif
+        model.addAttribute("brands", brandRepo.findAll()); // ✅ Marka listesini sayfaya gönder
+        return "add-car";
+    }
+
+
+ @PostMapping("/cars")
+    public String createCar(@RequestParam Long customerId,
+                            @RequestParam String plate,
+                            @RequestParam Long brandId,   // ✅ id olarak al
+                            @RequestParam Long modelId,   // ✅ id olarak al
+                            @RequestParam(required = false) Integer modelYear,
+                            RedirectAttributes ra) {
+
+        var customer = customerRepo.findById(customerId).orElseThrow();
+        var brandEntity = brandRepo.findById(brandId).orElseThrow();
+        var modelEntity = carModelRepo.findById(modelId).orElseThrow();
+                            
+        var car = new Car();
+     
+    String normPlate = plate == null ? null
+            : plate.trim().toUpperCase().replaceAll("\\s+", " ");
+
+    if (carRepo.existsByPlateIgnoreCase(normPlate)) {
+        ra.addFlashAttribute("err", "Bu plaka zaten kayıtlı: " + normPlate);
+        return "redirect:/cars/new";
+    }
+
+        car.setCustomer(customer);
+        car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
+        car.setBrand(brandEntity);   // ✅ entity set
+        car.setModel(modelEntity);   // ✅ entity set
+        car.setModelYear(modelYear);
+
+        carRepo.save(car);
+        ra.addFlashAttribute("msg", "Araba eklendi: " + car.getPlate());
+        return "redirect:/cars/new";
+    }
+    
+
+ // Araba GÜNCELLE (satır-içi)
+    @PostMapping("/cars/{id}/update")
+    public String updateCar(@PathVariable Long id,
+                            @RequestParam Long customerId,
+                            @RequestParam String plate,
+                            @RequestParam Long brandId,   // ✅ id olarak al
+                            @RequestParam Long modelId,   // ✅ id olarak al
+                            @RequestParam(required = false) Integer modelYear,
+                            RedirectAttributes ra) {
+
+        var car = carRepo.findById(id).orElseThrow();
+        var customer = customerRepo.findById(customerId).orElseThrow();
+        var brandEntity = brandRepo.findById(brandId).orElseThrow();
+        var modelEntity = carModelRepo.findById(modelId).orElseThrow();
+
+        if(carRepo.existsByPlateIgnoreCaseAndIdNot(plate.trim().toUpperCase(), id)) {
+            ra.addFlashAttribute("err", "Bu plaka zaten kayıtlı: " + plate);
+            return "redirect:/cars/new";
+        }
+        car.setCustomer(customer);
+        car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
+        car.setBrand(brandEntity);   // ✅
+        car.setModel(modelEntity);   // ✅
+        car.setModelYear(modelYear);
+                              
+        carRepo.save(car);
+        ra.addFlashAttribute("msg", "Araba güncellendi: " + car.getPlate());
+        return "redirect:/cars/new";
+    }
+
+@GetMapping("/api/brands/{brandId}/models")
+@ResponseBody
+public ResponseEntity<List<Map<String, Object>>> findModelsByBrand(@PathVariable Long brandId) {
+    List<CarModel> models = carModelRepo.findByBrand_IdOrderByNameAsc(brandId);
+
+    List<Map<String, Object>> list = models.stream()
+            .map((CarModel m) -> {
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", m.getId());      
+                row.put("name", m.getName());  
+                return row;
+            })
+            .collect(Collectors.toList());     
+    return ResponseEntity.ok(list);
 }
 
-
-@PostMapping("/cars")
-public String createCar(@RequestParam Long customerId,
-                        @RequestParam String plate,
-                        @RequestParam(required = false) String brand,
-                        // ESKİ: @RequestParam(required = false) String model,
-                        @RequestParam(name = "carModel", required = false) String carModel,
-                        @RequestParam(required = false) Integer modelYear,
-                        RedirectAttributes ra) {
-    var customer = customerRepo.findById(customerId).orElseThrow();
-    var car = new Car();
-    car.setCustomer(customer);
-    car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
-    car.setBrand(brand);
-    car.setModel(carModel);              // 👈 burada carModel
-    car.setModelYear(modelYear);
-    carRepo.save(car);
-    ra.addFlashAttribute("msg", "Araba eklendi: " + car.getPlate());
-    return "redirect:/cars/new";
-}
-
-
-// Araba GÜNCELLE (satır-içi)
-@PostMapping("/cars/{id}/update")
-public String updateCar(@PathVariable Long id,
-                        @RequestParam Long customerId,
-                        @RequestParam String plate,
-                        @RequestParam(required = false) String brand,
-                    
-                        @RequestParam(name = "carModel", required = false) String carModel,
-                        @RequestParam(required = false) Integer modelYear,
-                        RedirectAttributes ra) {
-    var car = carRepo.findById(id).orElseThrow();
-    var customer = customerRepo.findById(customerId).orElseThrow();
-
-    car.setCustomer(customer);
-    car.setPlate(plate != null ? plate.trim().toUpperCase() : null);
-    car.setBrand(brand);
-    car.setModel(carModel);              
-    car.setModelYear(modelYear);
-    carRepo.save(car);
-
-    ra.addFlashAttribute("msg", "Araba güncellendi: " + car.getPlate());
-    return "redirect:/cars/new";
-}
 
 
 // Araba sil
 @PostMapping("/cars/{id}/delete")
 public String deleteCar(@PathVariable Long id, RedirectAttributes ra) {
-    if (carRepo.existsById(id)) {
-        carRepo.deleteById(id);
-        ra.addFlashAttribute("msg", "Araba silindi (ID: " + id + ")");
-    } else {
+    var car = carRepo.findById(id).orElse(null);
+    if (car == null) {
         ra.addFlashAttribute("err", "Araba bulunamadı!");
+        return "redirect:/cars/new";
     }
+    // ✅ Soft delete
+    car.setActive(false);
+    carRepo.save(car);
+    ra.addFlashAttribute("msg", "Araba pasife alındı: " + car.getPlate());
     return "redirect:/cars/new";
 }
+
 
     // Poliçe aktifleştir
 @PostMapping("/policies/{id}/activate")

@@ -37,7 +37,7 @@ public class QuoteService {
                              LocalDate start,
                              LocalDate end,
                              int validDays) {
-                                   LocalDate today = LocalDate.now();
+                                LocalDate today = LocalDate.now();
     if (start.isBefore(today)) {
         throw new IllegalArgumentException("Geçmiş tarihli başlangıç seçilemez.");
     }
