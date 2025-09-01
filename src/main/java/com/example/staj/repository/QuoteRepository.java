@@ -11,6 +11,13 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
 
   Optional<Quote> findByQuoteNumber(String quoteNumber);
 
+  
+    long countByCar_Id(Long carId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from Quote q where q.car.id = :carId")
+    int deleteAllByCarId(@Param("carId") Long carId);
+    
   @Modifying
   @Query("""
     update Quote q

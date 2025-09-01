@@ -25,8 +25,14 @@
 </nav>
 
 <main class="container py-4">
-  <div th:if="${ok}"  class="alert alert-success" th:text="${ok}"></div>
-<div th:if="${err}" class="alert alert-danger"  th:text="${err}"></div>
+  <div th:if="${!#strings.isEmpty(ok)}"
+     class="alert alert-success"
+     th:text="${ok}"></div>
+
+<div th:if="${!#strings.isEmpty(err)}"
+     class="alert alert-danger"
+     th:text="${err}"></div>
+
 
   <div class="card card-soft">
     <div class="card-body">
@@ -51,7 +57,9 @@
           </tr>
           </thead>
           <tbody>
-          <tr th:each="q : ${quotes}">
+             <tr th:each="q : ${quotes}"
+              th:if="${q.status == T(com.example.staj.entity.QuoteStatus).PENDING
+              and (q.validUntil == null or q.validUntil.isAfter(T(java.time.LocalDateTime).now()))}">
             <td th:text="${q.quoteNumber}">Q-XXXXXX</td>
             <td th:text="${q.customer.name}">Müşteri</td>
             <td th:text="${q.car.plate}">34ABC123</td>
@@ -69,6 +77,20 @@
               <span th:if="${q.status.name() == 'EXPIRED'}" class="badge badge-expired">EXPIRED</span>
             </td>
             <td class="text-end">
+                          <!-- Sil butonu (sadece PENDING teklifler için) -->
+            <form th:if="${q.status == T(com.example.staj.entity.QuoteStatus).PENDING}"
+                  th:action="@{'/quotes/' + ${q.id} + '/delete'}"
+                  method="post" class="d-inline">
+              <input type="hidden"
+                    th:if="${_csrf != null}"
+                    th:name="${_csrf.parameterName}"
+                    th:value="${_csrf.token}">
+              <button type="submit" class="btn btn-outline-danger btn-sm"
+                      onclick="return confirm('Bu teklifi silmek istediğinize emin misiniz?')">
+                Sil
+              </button>
+            </form>
+
                   <form th:if="${q.status == T(com.example.staj.entity.QuoteStatus).PENDING
               and (q.validUntil == null or q.validUntil.isAfter(T(java.time.LocalDateTime).now()))}"
       th:action="@{'/quotes/' + ${q.id} + '/accept'}"

@@ -1,6 +1,8 @@
 package com.example.staj.controller;
 
 import com.example.staj.entity.Quote;
+import com.example.staj.entity.QuoteStatus;
+import com.example.staj.entity.Policy;
 import com.example.staj.repository.CarRepository;
 import com.example.staj.repository.CustomerRepository;
 import com.example.staj.repository.QuoteRepository;
@@ -67,29 +69,64 @@ public class QuoteController {
       if (startDate.isAfter(endDate)) {
         throw new IllegalArgumentException("Başlangıç tarihi, bitişten büyük olamaz.");
       }
-      Long carId = carRepo.findByPlate(carPlate.trim())
-              .orElseThrow(() -> new IllegalArgumentException("Plakaya ait araç bulunamadı: " + carPlate))
-              .getId();
+    var car = carRepo.findByPlate(carPlate.trim())
+            .orElseThrow(() -> new IllegalArgumentException("Plakaya ait araç bulunamadı: " + carPlate));
 
-      Quote q = quoteService.createQuote(customerId, carId, product, startDate, endDate, validDays);
-      ra.addFlashAttribute("ok", "Teklif oluşturuldu: " + q.getQuoteNumber());
-      return "redirect:/quotes";
+    Long carId = car.getId();
+
+    if (!car.getCustomer().getId().equals(customerId)) {
+    throw new IllegalStateException("Seçilen araç bu müşteriye ait değildir.");
+}
+
+    if (!car.isActive()) {
+      throw new IllegalStateException("Araç pasif. Pasif araç için teklif oluşturulamaz.");
+    }
+    Quote q = quoteService.createQuote(customerId, carId, product, startDate, endDate, validDays);
+    ra.addFlashAttribute("ok", "Teklif oluşturuldu: " + q.getQuoteNumber());
+    return "redirect:/quotes";
     } catch (Exception ex) {
       ra.addFlashAttribute("err", ex.getMessage());
       return "redirect:/quotes/new";
     }
   }
 
+ @PostMapping("/quotes/{id}/delete")
+public String delete(@PathVariable Long id, RedirectAttributes ra) {
+    try {
+        Quote q = quotes.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Teklif bulunamadı: " + id));
+
+        if (q.getStatus() != QuoteStatus.PENDING) {
+            throw new IllegalStateException("Sadece onaylanmamış (PENDING) teklifler silinebilir.");
+        }
+
+        quotes.delete(q);
+        ra.addFlashAttribute("ok", "Teklif silindi: " + q.getQuoteNumber());
+    } catch (Exception ex) {
+        ra.addFlashAttribute("err", ex.getMessage());
+    }
+    return "redirect:/quotes";
+}
+ 
+
 @PostMapping("/quotes/{id}/accept")
 public String accept(@PathVariable Long id, RedirectAttributes ra) {
     try {
-        policyService.acceptFromQuote(id);
-        ra.addFlashAttribute("ok", "Teklif onaylandı ve poliçe oluşturuldu.");
-        return "redirect:/policies";   // ✅ Buraya yönlendir
+        Policy p = policyService.acceptFromQuote(id);  // Policy dönüyor
+
+        String no = (p.getPolicyNumber() != null && !p.getPolicyNumber().isBlank())
+                ? p.getPolicyNumber()
+                : "POL-" + p.getId();
+
+        ra.addFlashAttribute("ok", "Onaylandı. Poliçe No: " + no);
+
+        return "redirect:/policies/" + p.getId();
+
     } catch (Exception ex) {
         ra.addFlashAttribute("err", ex.getMessage());
         return "redirect:/quotes";
     }
 }
+
 
 }

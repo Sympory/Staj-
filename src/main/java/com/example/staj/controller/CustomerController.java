@@ -90,13 +90,42 @@ public class CustomerController {
     // === Car (service ile) ===
 
     @GetMapping("/cars/new")
-    public String showAddCarForm(Model model) {
-        model.addAttribute("car", new Car());
-        model.addAttribute("customers", customerService.list());
-        model.addAttribute("cars", carService.listCars());
-        model.addAttribute("brands", carService.listBrands());   // ✅ repo yok
-        return "add-car";
-    }
+public String showAddCarForm(@RequestParam(required = false) String q,
+                             @RequestParam(required = false) Long customerId,
+                             @RequestParam(required = false) Long brandId,
+                             @RequestParam(required = false) Long modelId,
+                             @RequestParam(required = false) Integer yearFrom,
+                             @RequestParam(required = false) Integer yearTo,
+                             @RequestParam(defaultValue = "0") int page,
+                             @RequestParam(defaultValue = "10") int size,
+                             Model model) {
+
+    var pageable = org.springframework.data.domain.PageRequest.of(
+            Math.max(page, 0),
+            Math.min(Math.max(size, 1), 100),
+            org.springframework.data.domain.Sort.by("id").descending()
+    );
+
+    var result = carService.search(q, customerId, brandId, modelId, yearFrom, yearTo, pageable);
+
+    model.addAttribute("car", new Car());
+    model.addAttribute("customers", customerService.list());
+    model.addAttribute("brands", carService.listBrands());
+
+    model.addAttribute("page", result);
+    model.addAttribute("cars", result.getContent());
+
+    model.addAttribute("q", q);
+    model.addAttribute("customerId", customerId);
+    model.addAttribute("brandId", brandId);
+    model.addAttribute("modelId", modelId);
+    model.addAttribute("yearFrom", yearFrom);
+    model.addAttribute("yearTo", yearTo);
+    model.addAttribute("size", size);
+
+    return "add-car";
+}
+
 
     @PostMapping("/cars")
     public String createCar(@RequestParam Long customerId,
@@ -131,16 +160,22 @@ public class CustomerController {
         return "redirect:/cars/new";
     }
 
-    @PostMapping("/cars/{id}/delete")
-    public String deleteCar(@PathVariable Long id, RedirectAttributes ra) {
-        try {
-            carService.deleteCar(id);
-            ra.addFlashAttribute("msg", "Araba silindi (ID: " + id + ")");
-        } catch (IllegalArgumentException ex) {
-            ra.addFlashAttribute("err", ex.getMessage());
+ @PostMapping("/cars/{id}/delete")
+public String deleteCar(@PathVariable Long id, RedirectAttributes ra) {
+    try {
+        long activeBefore = policyService.countActiveByCar(id); // yeni küçük helper
+        carService.deleteCar(id);
+        if (activeBefore > 0) {
+            ra.addFlashAttribute("msg",
+              "Araçta aktif poliçe vardı; hepsi pasife çekildi. Tekrar sil dersen araç ve pasif poliçeler silinecek.");
+        } else {
+            ra.addFlashAttribute("msg", "Araç ve bağlı pasif poliçeler silindi.");
         }
-        return "redirect:/cars/new";
+    } catch (Exception ex) {
+        ra.addFlashAttribute("err", ex.getMessage());
     }
+    return "redirect:/cars/new";
+}
 
     @GetMapping("/api/brands/{brandId}/models")
     @ResponseBody
@@ -157,6 +192,18 @@ public class CustomerController {
     }
 
     // === Policy (tamamen service) ===
+    @GetMapping("/policies/{id}")
+public String policyDetail(@PathVariable Long id,
+                           @ModelAttribute("ok") String ok,
+                           @ModelAttribute("err") String err,
+                           Model model) {
+    var p = policyService.get(id);
+    model.addAttribute("policy", p);
+    if (ok != null && !ok.isBlank()) model.addAttribute("ok", ok);
+    if (err != null && !err.isBlank()) model.addAttribute("err", err);
+    return "policy-detail"; // templates/policy-detail.html
+}
+
 
     @GetMapping("/policies")
     public String listPolicies(@RequestParam(required = false) String q,
@@ -193,6 +240,7 @@ public class CustomerController {
         return "list-policies";
     }
 
+    
     @PostMapping("/policies/{id}/activate")
     public String activatePolicy(@PathVariable Long id, RedirectAttributes ra) {
         try {
