@@ -13,23 +13,26 @@ public class PricingService {
   public record Pricing(BigDecimal net, BigDecimal tax, BigDecimal gross) {}
 
   public Pricing price(Car car, String product, LocalDate start, LocalDate end) {
+    if (start.isAfter(end)) throw new IllegalArgumentException("Başlangıç > Bitiş olamaz");
+
     long days = Math.max(ChronoUnit.DAYS.between(start, end), 1);
 
-    BigDecimal base = switch (product.toUpperCase()) {
-      case "KASKO"   -> BigDecimal.valueOf(4000);
-      case "TRAFIK"  -> BigDecimal.valueOf(2000);
-      default        -> BigDecimal.valueOf(3000);
+    String p = (product == null ? "GENEL" : product).toUpperCase();
+    BigDecimal base = switch (p) {
+      case "KASKO"  -> BigDecimal.valueOf(4000);
+      case "TRAFIK" -> BigDecimal.valueOf(2000);
+      default       -> BigDecimal.valueOf(3000);
     };
 
-    // Çok basit risk örneği: yaşa göre
-    BigDecimal riskFactor = BigDecimal.valueOf(car.getModelYear() <= 2015 ? 1.2 : 1.0);
+Integer year = car.getModelYear();
+BigDecimal riskFactor = (year != null && year <= 2015) ? BigDecimal.valueOf(1.2) : BigDecimal.ONE;
 
-    BigDecimal net  = base.multiply(riskFactor)
-                          .multiply(BigDecimal.valueOf(days))
-                          .divide(BigDecimal.valueOf(365), 2, RoundingMode.HALF_UP);
+    BigDecimal net   = base.multiply(riskFactor)
+                           .multiply(BigDecimal.valueOf(days))
+                           .divide(BigDecimal.valueOf(365), 2, RoundingMode.HALF_UP);
 
-    BigDecimal tax  = net.multiply(BigDecimal.valueOf(0.10)).setScale(2, RoundingMode.HALF_UP);
-    BigDecimal gross= net.add(tax).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal tax   = net.multiply(BigDecimal.valueOf(0.10)).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal gross = net.add(tax).setScale(2, RoundingMode.HALF_UP);
 
     return new Pricing(net, tax, gross);
   }

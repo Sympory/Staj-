@@ -7,11 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
+import java.util.Objects;
 import java.util.List;
 
 @Service
 public class CarService {
+    private final PricingService pricing; // <-- added
     private final CarRepository carRepo;
     private final CustomerRepository customerRepo;
     private final BrandRepository brandRepo;
@@ -23,13 +24,16 @@ public class CarService {
                       BrandRepository brandRepo,
                       CarModelRepository carModelRepo,
                       PolicyRepository policyRepo,
-                      QuoteRepository quoteRepo) { // <-- added QuoteRepository
+                      QuoteRepository quoteRepo,
+                      PricingService pricing ) { // <-- added QuoteRepository
         this.carRepo = carRepo;
         this.customerRepo = customerRepo;
         this.brandRepo = brandRepo;
         this.carModelRepo = carModelRepo;
         this.policyRepo = policyRepo; // <-- eklendi
-        this.quoteRepo = quoteRepo; // <-- assign quoteRepo
+        this.quoteRepo = quoteRepo;
+        this.pricing = pricing;                         // <-- EKLE
+ // <-- assign quoteRepo
     }
 
     // --- READS ---
@@ -83,15 +87,29 @@ public class CarService {
         var customer = customerRepo.findById(customerId).orElseThrow();
         var brand = brandRepo.findById(brandId).orElseThrow();
         var model = carModelRepo.findById(modelId).orElseThrow();
+            Integer oldYear = car.getModelYear();                 // <-- EKLE
 
         var normalizedPlate = normalizePlate(plate);
 
+        var saved = carRepo.save(car);                        // <-- değişken olarak tut
 
         carRepo.findByPlate(normalizedPlate).ifPresent(other -> {
             if (!other.getId().equals(id)) {
                 throw new IllegalArgumentException("Bu plaka başka bir araçta kullanılıyor: " + normalizedPlate);
             }
         });
+         // 🔁 Model yılı değiştiyse: bu araca ait PENDING teklifleri reprice et
+    if (!Objects.equals(oldYear, modelYear)) {           // <-- EKLE
+        var pendings = quoteRepo.findAllByCarIdAndStatus(saved.getId(), QuoteStatus.PENDING);
+        for (var q : pendings) {
+            var p = pricing.price(saved, q.getProduct(), q.getCoverageStart(), q.getCoverageEnd());
+            q.setNetPremium(p.net());
+            q.setTax(p.tax());
+            q.setGrossPremium(p.gross());
+        }
+        quoteRepo.saveAll(pendings);
+    }   
+        
 
         car.setCustomer(customer);
         car.setPlate(normalizedPlate);

@@ -6,12 +6,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 public interface QuoteRepository extends JpaRepository<Quote, Long> {
 
   Optional<Quote> findByQuoteNumber(String quoteNumber);
 
-  
+    
+    List<Quote> findAllByCarIdAndStatus(Long carId, QuoteStatus status);
+
     long countByCar_Id(Long carId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

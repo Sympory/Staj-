@@ -30,6 +30,14 @@ public class QuoteService {
         this.pricing = pricing;
     }
 
+        /** Tek bir teklifi yeniden fiyatlandır (merkez nokta) */
+    public void priceQuote(Quote q) {
+        var p = pricing.price(q.getCar(), q.getProduct(), q.getCoverageStart(), q.getCoverageEnd());
+        q.setNetPremium(p.net());
+        q.setTax(p.tax());
+        q.setGrossPremium(p.gross());
+    }
+
     @Transactional
     public Quote createQuote(Long customerId,
                              Long carId,
@@ -65,7 +73,7 @@ public class QuoteService {
         q.setTax(p.tax());
         q.setGrossPremium(p.gross());
         q.setStatus(QuoteStatus.PENDING);
-
+        priceQuote(q);
         return quotes.save(q);
     }
 
