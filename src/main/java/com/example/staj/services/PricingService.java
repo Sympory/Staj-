@@ -25,7 +25,7 @@ public class PricingService {
     };
 
 Integer year = car.getModelYear();
-BigDecimal riskFactor = (year != null && year <= 2015) ? BigDecimal.valueOf(1.2) : BigDecimal.ONE;
+BigDecimal riskFactor = ( year <= 2015) ? BigDecimal.valueOf(1.2) : BigDecimal.ONE;
 
     BigDecimal net   = base.multiply(riskFactor)
                            .multiply(BigDecimal.valueOf(days))

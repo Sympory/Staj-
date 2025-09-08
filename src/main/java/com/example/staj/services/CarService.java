@@ -87,7 +87,7 @@ public class CarService {
         var customer = customerRepo.findById(customerId).orElseThrow();
         var brand = brandRepo.findById(brandId).orElseThrow();
         var model = carModelRepo.findById(modelId).orElseThrow();
-            Integer oldYear = car.getModelYear();                 // <-- EKLE
+            Integer oldYear = car.getModelYear();                 
 
         var normalizedPlate = normalizePlate(plate);
 
@@ -98,8 +98,15 @@ public class CarService {
                 throw new IllegalArgumentException("Bu plaka başka bir araçta kullanılıyor: " + normalizedPlate);
             }
         });
-         // 🔁 Model yılı değiştiyse: bu araca ait PENDING teklifleri reprice et
-    if (!Objects.equals(oldYear, modelYear)) {           // <-- EKLE
+        
+         if (!model.getBrand().getId().equals(brandId)) {
+            throw new IllegalArgumentException(
+                "Seçilen model (" + model.getName() + ") belirtilen markaya ait değil: " + brand.getName()
+            );
+        }
+
+         // model yılı değişinde yeniden fiyatlandırma yap
+    if (!Objects.equals(oldYear, modelYear)) {        
         var pendings = quoteRepo.findAllByCarIdAndStatus(saved.getId(), QuoteStatus.PENDING);
         for (var q : pendings) {
             var p = pricing.price(saved, q.getProduct(), q.getCoverageStart(), q.getCoverageEnd());
