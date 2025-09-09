@@ -155,6 +155,41 @@ class CarServiceTest {
         verify(carRepo).delete(car);
         verify(policyRepo, never()).passivateAllByCar(anyLong(), any(), any());
     }
+    @Test
+void updateCar_modelYili_degismediyse_reprice_edilmez() {
+  // arrange
+  Brand bmw = stubBrand(2L, "BMW");
+  CarModel m5 = stubModel(4L, "5 Serisi", bmw);
+  Car existing = stubCar(10L, 2015, bmw, m5, true);
+
+  when(carRepo.findById(10L)).thenReturn(Optional.of(existing));
+  when(customerRepo.findById(11L)).thenReturn(Optional.of(stubCustomer(11L, "X")));
+  when(brandRepo.findById(2L)).thenReturn(Optional.of(bmw));
+  when(carModelRepo.findById(4L)).thenReturn(Optional.of(m5));
+  when(carRepo.findByPlate("58 DR 801")).thenReturn(Optional.of(existing));
+  when(carRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+  // act
+  carService.updateCar(10L, 11L, "58 DR 801", 2L, 4L, 2015); // aynı yıl
+
+  // assert
+  verify(quoteRepo, never()).findAllByCarIdAndStatus(anyLong(), any());
+  verify(quoteRepo, never()).saveAll(anyList());
+}
+@Test
+void createCar_plakaZatenVar_hata() {
+  Brand bmw = stubBrand(2L, "BMW");
+  CarModel m5 = stubModel(4L, "5 Serisi", bmw);
+  when(customerRepo.findById(11L)).thenReturn(Optional.of(stubCustomer(11L, "X")));
+  when(brandRepo.findById(2L)).thenReturn(Optional.of(bmw));
+  when(carModelRepo.findById(4L)).thenReturn(Optional.of(m5));
+  when(carRepo.findByPlate("58 DR 801")).thenReturn(Optional.of(stubCar(99L, 2018, bmw, m5, true)));
+
+  assertThatThrownBy(() -> carService.createCar(11L, "58 DR 801", 2L, 4L, 2020))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("zaten kayıtlı");
+}
+
 
     @Test
     void createCar_model_markaya_ait_degilse_hata() {
