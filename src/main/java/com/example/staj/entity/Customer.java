@@ -1,5 +1,5 @@
 package com.example.staj.entity;
-
+import com.example.staj.entity.enums.Gender;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -17,6 +17,13 @@ public class Customer {
     @OneToMany(mappedBy = "customer")
     private java.util.List<Car> cars = new java.util.ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 8)
+    private com.example.staj.entity.enums.Gender gender;
+    public com.example.staj.entity.enums.Gender getGender() { return gender; }
+    public void setGender(com.example.staj.entity.enums.Gender gender) { this.gender = gender; }
+
+    
 
     @NotBlank(message = "Email boş olamaz")
     @Email(message = "Geçerli bir email girin")

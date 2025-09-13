@@ -27,6 +27,9 @@ public class Quote {
             foreignKey = @ForeignKey(name = "fk_quote_car"))
     private Car car;
 
+    @Column(name = "has_previous_claims", nullable = false)
+    private Boolean hasPreviousClaims = false;
+
     @Column(nullable = false, length = 50)
     private String product;
 
@@ -61,7 +64,10 @@ public class Quote {
             this.quoteNumber = "Q-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         }
     }
+    
 
+    public Boolean getHasPreviousClaims() { return hasPreviousClaims; }
+    public void setHasPreviousClaims(Boolean hasPreviousClaims) { this.hasPreviousClaims = hasPreviousClaims; }
     // ---- getters/setters ----
     public Long getId() { return id; }
 

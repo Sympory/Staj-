@@ -36,6 +36,7 @@ public class QuoteService {
         q.setNetPremium(p.net());
         q.setTax(p.tax());
         q.setGrossPremium(p.gross());
+        q.getHasPreviousClaims();
     }
 
     @Transactional

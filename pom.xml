@@ -67,6 +67,14 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  
+  <configuration>
+  <excludes>
+    <exclude>**/entity/**</exclude>
+    <exclude>**/*Application.class</exclude>
+    <exclude>**/config/**</exclude>
+  </excludes>
+</configuration>
 
   <build>
     <plugins>
